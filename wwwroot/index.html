@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>File Browser</title>
+    <style>
+        :root {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #1a1a1a;
+            background-color: #f5f5f5;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: #ffffff;
+            color: #1a1a1a;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #e0e0e0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+            header h1 {
+                margin: 0;
+                font-size: 1.5rem;
+                font-weight: 600;
+            }
+
+        main {
+            flex: 1;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .panel {
+            background: #ffffff;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .breadcrumbs {
+            color: #666666;
+            font-weight: 500;
+            word-break: break-all;
+            font-size: 0.95rem;
+        }
+
+        .search-form {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+            .search-form input {
+                padding: 0.625rem 0.75rem;
+                border: 1px solid #d0d0d0;
+                border-radius: 0.375rem;
+                min-width: 240px;
+                background: #ffffff;
+                font-size: 0.95rem;
+            }
+
+                .search-form input:focus {
+                    outline: none;
+                    border-color: #666666;
+                    box-shadow: 0 0 0 3px rgba(102, 102, 102, 0.1);
+                }
+
+        button {
+            padding: 0.625rem 1rem;
+            border-radius: 0.375rem;
+            border: 1px solid #d0d0d0;
+            background: #ffffff;
+            color: #1a1a1a;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+            button:hover {
+                background: #f5f5f5;
+                border-color: #999999;
+            }
+
+            button:active {
+                background: #eeeeee;
+            }
+
+            button:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e0e0e0;
+            text-align: left;
+            font-size: 0.95rem;
+            vertical-align: top;
+        }
+
+        th {
+            background: #f9f9f9;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        tbody tr:hover {
+            background: #f9f9f9;
+        }
+
+        .stats {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            font-size: 0.95rem;
+        }
+
+            .stats span {
+                font-weight: 500;
+                color: #1a1a1a;
+            }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .link-button {
+            background: none;
+            border: none;
+            padding: 0;
+            color: #666666;
+            font: inherit;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+            .link-button:hover {
+                color: #1a1a1a;
+                text-decoration: underline;
+            }
+
+            .link-button svg {
+                flex-shrink: 0;
+                width: 20px;
+                height: 20px;
+            }
+
+        .actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .message-row td {
+            text-align: center;
+            color: #999999;
+            padding: 2rem 1rem;
+        }
+
+        button.action-btn {
+            padding: 0.4rem 0.75rem;
+            font-size: 0.85rem;
+            background: #ffffff;
+            color: #1a1a1a;
+            border: 1px solid #d0d0d0;
+        }
+
+            button.action-btn:hover {
+                background: #f5f5f5;
+                border-color: #999999;
+            }
+
+            button.action-btn.delete {
+                border-color: #cc0000;
+                color: #cc0000;
+            }
+
+                button.action-btn.delete:hover {
+                    background: #fff5f5;
+                    border-color: #990000;
+                    color: #990000;
+                }
+
+            button.action-btn.copy {
+                border-color: #333333;
+                color: #333333;
+            }
+
+                button.action-btn.copy:hover {
+                    background: #f5f5f5;
+                    border-color: #1a1a1a;
+                    color: #1a1a1a;
+                }
+
+            button.action-btn.move {
+                border-color: #666666;
+                color: #666666;
+            }
+
+                button.action-btn.move:hover {
+                    background: #f5f5f5;
+                    border-color: #333333;
+                    color: #333333;
+                }
+
+            button.action-btn.preview {
+                border-color: #666666;
+                color: #666666;
+            }
+
+                button.action-btn.preview:hover {
+                    background: #f5f5f5;
+                    border-color: #333333;
+                    color: #333333;
+                }
+
+        .modal {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 1100;
+            align-items: center;
+            justify-content: center;
+        }
+
+            .modal.open {
+                display: flex;
+            }
+
+        .modal-content {
+            background: #ffffff;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            border: 1px solid #e0e0e0;
+        }
+
+        .modal-header {
+            margin: 0 0 1.5rem 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .modal-body {
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: #1a1a1a;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 0.625rem 0.75rem;
+            border: 1px solid #d0d0d0;
+            border-radius: 0.375rem;
+            box-sizing: border-box;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+            background: #ffffff;
+        }
+
+            .modal-input:focus {
+                outline: none;
+                border-color: #666666;
+                box-shadow: 0 0 0 3px rgba(102, 102, 102, 0.1);
+            }
+
+        .modal-footer {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+        }
+
+            .modal-footer button {
+                padding: 0.625rem 1.25rem;
+            }
+
+                .modal-footer button.cancel {
+                    background: #ffffff;
+                    border: 1px solid #d0d0d0;
+                    color: #1a1a1a;
+                }
+
+                    .modal-footer button.cancel:hover {
+                        background: #f5f5f5;
+                        border-color: #999999;
+                    }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        dialog {
+            border: none;
+            border-radius: 0.5rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            padding: 0;
+            max-width: 90vw;
+            max-height: 90vh;
+            z-index: 1000;
+            position: relative;
+            background: #ffffff;
+        }
+
+            dialog::backdrop {
+                background: rgba(0, 0, 0, 0.5);
+            }
+
+        .dialog-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ffffff;
+            color: #1a1a1a;
+            padding: 1.5rem 1.5rem;
+            border-bottom: 1px solid #e0e0e0;
+            border-radius: 0.5rem 0.5rem 0 0;
+            margin: 0;
+        }
+
+            .dialog-header h1 {
+                margin: 0;
+                font-size: 1.5rem;
+                font-weight: 600;
+            }
+
+        .dialog-close-btn {
+            background: none;
+            border: none;
+            color: #666666;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+            .dialog-close-btn:hover {
+                color: #1a1a1a;
+                background: #f5f5f5;
+                border-radius: 0.25rem;
+            }
+
+        .dialog-content {
+            overflow-y: auto;
+            max-height: calc(90vh - 60px);
+        }
+
+        .open-browser-btn {
+            position: fixed;
+            top: 2rem;
+            left: 2rem;
+            width: 3.5rem;
+            height: 3.5rem;
+            border-radius: 50%;
+            padding: 0;
+            font-size: 1.5rem;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            border: 2px solid #666666;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+            .open-browser-btn:hover {
+                background: #ffffff;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+                transform: translateY(-4px);
+                border-color: #555555;
+            }
+
+            .open-browser-btn:active {
+                transform: translateY(-2px);
+            }
+
+            .open-browser-btn svg {
+                color: #ffd700;
+                stroke: #666666;
+                filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+            }
+
+        body:not(.dialog-shown) .open-browser-btn {
+            animation: bounce-button 2.5s ease-in-out infinite;
+        }
+
+        @keyframes bounce-button {
+            0%, 100% {
+                transform: translateY(0);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            }
+
+            50% {
+                transform: translateY(-8px);
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            }
+        }
+
+        .preview-text {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: "Courier New", monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: #1a1a1a;
+            background: #f9f9f9;
+            padding: 1rem;
+            border-radius: 0.375rem;
+            border: 1px solid #e0e0e0;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .preview-error {
+            color: #cc0000;
+            padding: 1rem;
+            background: #fff5f5;
+            border-radius: 0.375rem;
+            border: 1px solid #ffcccc;
+        }
+
+        .preview-unsupported {
+            color: #666666;
+            padding: 1rem;
+            background: #f9f9f9;
+            border-radius: 0.375rem;
+            border: 1px solid #e0e0e0;
+        }
+
+        .preview-loading {
+            text-align: center;
+            padding: 2rem;
+            color: #999999;
+        }
+
+        svg {
+            color: inherit;
+            stroke: currentColor;
+        }
+
+        .entry-name {
+            vertical-align: top;
+        }
+
+        .entry-icon {
+            flex-shrink: 0;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <button id="openBrowserBtn" class="open-browser-btn" title="Open File Browser">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+        </svg>
+    </button>
+
+    <dialog id="browserDialog">
+        <div class="dialog-header">
+            <h1>File Browser</h1>
+            <button id="closeBrowserBtn" class="dialog-close-btn" title="Close File Browser">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="dialog-content">
+            <header>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: space-between;">
+                    <p id="currentRoot" aria-live="polite"></p>
+                    <form id="searchForm" class="search-form" role="search">
+                        <input id="searchInput" type="search" placeholder="Search files" aria-label="Search files" />
+                        <button type="submit">Search</button>
+                        <button id="clearSearchBtn" type="button">Clear</button>
+                    </form>
+                </div>
+            </header>
+            <main>
+                <section class="panel stats" id="stats" aria-live="polite">
+                    <span data-stat="files">0 files</span>
+                    <span data-stat="folders">0 folders</span>
+                    <span data-stat="size">0 bytes</span>
+                </section>
+
+                <section class="panel" id="uploadPanel">
+                    <h2>Upload</h2>
+                    <div class="upload-controls">
+                        <input id="fileInput" type="file" multiple />
+                        <button id="uploadBtn" type="button">Upload</button>
+                    </div>
+                </section>
+
+                <div style="text-align: center; padding: 0.75rem 0; min-height: 1.5rem;">
+                    <p id="uploadStatus" role="status" style="margin: 0; font-size: 0.95rem; color: #666666;"></p>
+                </div>
+
+                <section class="panel" id="listingPanel">
+                    <div class="panel-header">
+                        <h2>Contents</h2>
+                        <button id="navigateUpBtn" type="button">Up</button>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Name</th>
+                                    <th scope="col">Size</th>
+                                    <th scope="col">Modified</th>
+                                    <th scope="col">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="listingBody">
+                                <tr>
+                                    <td colspan="4">Initializing…</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </main>
+        </div>
+
+        <!-- Move Modal - INSIDE dialog -->
+        <div id="moveModal" class="modal">
+            <div class="modal-content">
+                <h2 class="modal-header">Move Item</h2>
+                <div class="modal-body">
+                    <label class="modal-label">Destination Folder (relative path or / for root):</label>
+                    <input id="moveDestinationInput" type="text" class="modal-input" placeholder="folder/subfolder" />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="cancel" id="moveCancelBtn">Cancel</button>
+                    <button type="button" id="moveConfirmBtn">Move</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Copy Modal - INSIDE dialog -->
+        <div id="copyModal" class="modal">
+            <div class="modal-content">
+                <h2 class="modal-header">Copy Item</h2>
+                <div class="modal-body">
+                    <label class="modal-label">Destination Folder (relative path or / for root):</label>
+                    <input id="copyDestinationInput" type="text" class="modal-input" placeholder="folder/subfolder" />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="cancel" id="copyCancelBtn">Cancel</button>
+                    <button type="button" id="copyConfirmBtn">Copy</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview Modal - INSIDE dialog (like copy/move) -->
+        <div id="previewModal" class="modal">
+            <div class="modal-content">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+                    <h2 id="previewFileName" style="margin: 0; font-size: 1.25rem; font-weight: 600;">File Preview</h2>
+                    <button id="previewModalClose" type="button" style="background: none; border: none; color: #111; font-size: 1.5rem; cursor: pointer; padding: 0; width: 2rem; height: 2rem; display: flex; align-items: center; justify-content: center;" title="Close preview">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+                <div id="previewModalBody" style="margin-bottom: 1.5rem;">
+                    <div class="preview-loading">Loading preview...</div>
+                </div>
+            </div>
+        </div>
+    </dialog>
+
+    <template id="entry-row-template">
+        <tr>
+            <td class="entry-name"></td>
+            <td class="entry-size"></td>
+            <td class="entry-modified"></td>
+            <td class="entry-actions"></td>
+        </tr>
+    </template>
+
+    <script type="module" src="./app.js"></script>
+</body>
+</html>
