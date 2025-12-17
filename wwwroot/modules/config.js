@@ -1,32 +1,13 @@
 // Configuration constants for the file browser application
 
 export const CONFIG = {
-    // Preview configuration
+    // Search debounce time (milliseconds)
+    SEARCH_DEBOUNCE_TIME: 300,
+    
+    // Preview file size limits
     MAX_TEXT_PREVIEW_SIZE: 1024 * 1024, // 1 MB
     MAX_IMAGE_PREVIEW_SIZE: 500 * 1024, // 500 KB
-    MAX_TEXT_PREVIEW_CHARS: 10000,
-    
-    // Pagination configuration
-    ENTRIES_PER_PAGE: 50,
-    LOAD_MORE_THRESHOLD: 100, // pixels from bottom before loading more
-    
-    // File preview timeouts
-    PREVIEW_LOAD_TIMEOUT: 10000, // 10 seconds
-    
-    // Search debounce time
-    SEARCH_DEBOUNCE_TIME: 300, // milliseconds
-    
-    // Supported text file extensions for preview
-    TEXT_EXTENSIONS: new Set([
-        '.txt', '.md', '.json', '.xml', '.html', '.css', '.js', '.ts',
-        '.cs', '.java', '.py', '.rb', '.php', '.cpp', '.h', '.log',
-        '.csv', '.yml', '.yaml', '.toml', '.conf', '.config'
-    ]),
-    
-    // Supported image extensions for preview
-    IMAGE_EXTENSIONS: new Set([
-        '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp'
-    ])
+    MAX_TEXT_PREVIEW_CHARS: 10000
 };
 
 // Map image extensions to MIME types

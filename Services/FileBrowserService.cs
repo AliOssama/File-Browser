@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TestProject.Models;
-using TestProject.Options;
 
 namespace TestProject.Services;
 

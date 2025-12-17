@@ -186,15 +186,14 @@ Content-Type: application/json
 TestProject/
 |-- Program.cs                      # API routes and middleware configuration
 |-- appsettings.json                # Application configuration
-|-- Services/
-|   |-- FileBrowserService.cs       # Core file operation logic
 |-- Models/
 |   |-- FileSystemEntry.cs          # File/folder metadata
 |   |-- BrowseResult.cs             # Browse API response
 |   |-- CopyMoveRequest.cs          # Copy/move request body
 |   |-- FilePreview.cs              # File preview response
-|-- Options/
 |   |-- FileBrowserOptions.cs       # Configuration options
+|-- Services/
+|   |-- FileBrowserService.cs       # Core file operation logic
 |-- wwwroot/
     |-- index.html                  # Main HTML page with styles
     |-- app.js                      # Application initialization and main event handling

@@ -3,7 +3,6 @@ using System.IO;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using TestProject.Options;
 using TestProject.Services;
 using TestProject.Models;
 using Microsoft.AspNetCore.Http.Features;

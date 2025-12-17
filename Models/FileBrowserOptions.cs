@@ -1,4 +1,4 @@
-namespace TestProject.Options;
+namespace TestProject.Models;
 
 public sealed class FileBrowserOptions
 {
