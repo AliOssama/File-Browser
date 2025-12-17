@@ -63,8 +63,14 @@ namespace TestProject {
             });
 
             app.UseHttpsRedirection();
+            
+            // Serve index.html as the default file for root requests
+            app.UseDefaultFiles(new DefaultFilesOptions
+            {
+                DefaultFileNames = { "index.html" }
+            });
             app.UseStaticFiles();
-
+            
             app.MapGet("/api/files/browse", (string? path, FileBrowserService service) =>
             {
                 var result = service.Browse(path);
@@ -154,6 +160,10 @@ namespace TestProject {
                 catch (FileNotFoundException)
                 {
                     return Results.NotFound(new { error = "Item not found" });
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    return Results.NotFound(new { error = "Directory not found" });
                 }
             });
 

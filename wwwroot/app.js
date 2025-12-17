@@ -5,7 +5,7 @@ import { dom, setListingMessage, updateStaticUi, toggleBrowserDialog, showStatus
 import { browsePath, searchFiles, uploadFiles, getDownloadUrl } from './modules/api.js';
 import { renderBrowseResults, renderSearchResults, renderEntries, applyNormalizedPath } from './modules/render.js';
 import { closeMoveModal, closeCopyModal, closePreviewModal } from './modules/modals.js';
-import { normalizeClientPath, getFileExtension } from './modules/formatting.js';
+import { normalizeClientPath, getFileExtension, formatBytes } from './modules/formatting.js';
 import { CONFIG, ERROR_MESSAGES } from './modules/config.js';
 
 // Initialize the application
@@ -32,11 +32,24 @@ function readStateFromUrl() {
  * Bind all event listeners
  */
 function bindEvents() {
-    // Search form
+    // Search form submit
     dom.searchForm.addEventListener('submit', event => {
         event.preventDefault();
         setState({ query: dom.searchInput.value.trim() });
         persistState();
+    });
+
+    // Debounced search input (search as you type)
+    let searchTimeout;
+    dom.searchInput.addEventListener('input', () => {
+        // Clear previous timeout
+        clearTimeout(searchTimeout);
+        
+        // Wait 300ms after user stops typing before searching
+        searchTimeout = setTimeout(() => {
+            setState({ query: dom.searchInput.value.trim() });
+            persistState();
+        }, 300);
     });
 
     dom.clearSearchBtn.addEventListener('click', () => {
@@ -105,7 +118,7 @@ async function loadData() {
     try {
         if (state.query) {
             const results = await searchFiles(state.path, state.query);
-            renderSearchResults(results, state, loadData);
+            renderSearchResults(results, state, loadData, persistState);
         } else {
             const browseResult = await browsePath(state.path);
             applyNormalizedPath(browseResult?.currentPath ?? '', state, updateUrlFromState);

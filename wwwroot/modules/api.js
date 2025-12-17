@@ -95,11 +95,11 @@ export async function getFilePreview(relativeFilePath) {
 /**
  * Delete a file or directory
  * @param {string} relativeItemPath - Relative path to the item
- * @param {boolean} [recursive=false] - Whether to delete recursively
+ * @param {boolean} [isDirectory=false] - Whether the item is a directory
  * @returns {Promise<void>}
  */
-export async function deleteItem(relativeItemPath, recursive = false) {
-    const response = await fetch(`/api/files/delete${buildQuery({ path: relativeItemPath, recursive: recursive ? 'true' : '' })}`, {
+export async function deleteItem(relativeItemPath, isDirectory = false) {
+    const response = await fetch(`/api/files/delete${buildQuery({ path: relativeItemPath, recursive: isDirectory ? 'true' : '' })}`, {
         method: 'DELETE'
     });
 

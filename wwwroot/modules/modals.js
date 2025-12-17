@@ -76,15 +76,20 @@ export async function showCopyModal(relativePath, state, onComplete) {
 /**
  * Confirm and delete an item
  * @param {string} relativePath - Item path
+ * @param {boolean} isDirectory - Whether the item is a directory
  * @param {Function} onComplete - Callback when delete is complete
  */
-export async function confirmDeleteItem(relativePath, onComplete) {
-    if (!confirm('Are you sure you want to delete this item?')) {
+export async function confirmDeleteItem(relativePath, isDirectory = false, onComplete) {
+    const message = isDirectory 
+        ? 'Are you sure you want to delete this directory and all its contents?'
+        : 'Are you sure you want to delete this item?';
+    
+    if (!confirm(message)) {
         return;
     }
 
     try {
-        await deleteItem(relativePath);
+        await deleteItem(relativePath, isDirectory);
         showStatus('Item deleted successfully.', 'success');
         await onComplete();
     } catch (error) {

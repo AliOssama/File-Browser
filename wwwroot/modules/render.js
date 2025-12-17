@@ -29,10 +29,11 @@ export function renderBrowseResults(result) {
  * @param {Array} entries - Array of entries
  * @param {Object} [state] - Application state for callback binding
  * @param {Function} [onLoadData] - Callback to reload data
+ * @param {Function} [persistCallback] - Callback to persist state
  */
-export function renderSearchResults(entries, state = null, onLoadData = null) {
+export function renderSearchResults(entries, state = null, onLoadData = null, persistCallback = null) {
     const list = Array.isArray(entries) ? entries : [];
-    renderEntries(list, true, state, onLoadData);
+    renderEntries(list, true, state, onLoadData, persistCallback);
 
     let files = 0;
     let folders = 0;
@@ -140,7 +141,7 @@ export function renderEntries(entries, isSearch = false, state = null, onLoadDat
         deleteBtn.className = 'action-btn delete';
         deleteBtn.textContent = 'Delete';
         if (onLoadData) {
-            deleteBtn.addEventListener('click', () => confirmDeleteItem(relativePath, onLoadData));
+            deleteBtn.addEventListener('click', () => confirmDeleteItem(relativePath, entry?.isDirectory ?? false, onLoadData));
         }
         actionsWrapper.appendChild(deleteBtn);
 

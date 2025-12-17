@@ -118,6 +118,18 @@ public sealed class FileBrowserService
         var destinationPath = Path.Combine(targetDirectory, sanitizedName);
         EnsureWithinRoot(destinationPath);
 
+        // Handle duplicate filenames
+        var counter = 1;
+        var extension = Path.GetExtension(sanitizedName);
+        var nameWithoutExt = Path.GetFileNameWithoutExtension(sanitizedName);
+
+        while (File.Exists(destinationPath))
+        {
+            var newName = $"{nameWithoutExt} ({counter}){extension}";
+            destinationPath = Path.Combine(targetDirectory, newName);
+            counter++;
+        }
+
         await using var destinationStream = File.Create(destinationPath);
         await file.CopyToAsync(destinationStream, cancellationToken);
     }
@@ -246,6 +258,13 @@ public sealed class FileBrowserService
         }
 
         var absolutePath = ResolveAbsolutePath(relativeItemPath);
+        
+        // Check if the path exists before attempting to get attributes
+        if (!File.Exists(absolutePath) && !Directory.Exists(absolutePath))
+        {
+            throw new FileNotFoundException($"Path not found: {absolutePath}");
+        }
+
         var attributes = File.GetAttributes(absolutePath);
         var isDirectory = attributes.HasFlag(FileAttributes.Directory);
 
@@ -255,7 +274,14 @@ public sealed class FileBrowserService
             {
                 throw new InvalidOperationException("Directory is not empty. Use recursive deletion to remove non-empty directories.");
             }
-            DeleteDirectoryRecursive(absolutePath);
+            if (recursive)
+            {
+                DeleteDirectoryRecursive(absolutePath);
+            }
+            else
+            {
+                Directory.Delete(absolutePath);
+            }
             _logger.LogInformation("Deleted directory: {Path}", absolutePath);
         }
         else
@@ -293,6 +319,13 @@ public sealed class FileBrowserService
         }
 
         var sourceAbsolutePath = ResolveAbsolutePath(relativeSourcePath);
+        
+        // Check if the source path exists before attempting to get attributes
+        if (!File.Exists(sourceAbsolutePath) && !Directory.Exists(sourceAbsolutePath))
+        {
+            throw new FileNotFoundException($"Source path not found: {sourceAbsolutePath}");
+        }
+
         var sourceAttributes = File.GetAttributes(sourceAbsolutePath);
         var isDirectory = sourceAttributes.HasFlag(FileAttributes.Directory);
 
@@ -319,6 +352,13 @@ public sealed class FileBrowserService
         }
 
         var sourceAbsolutePath = ResolveAbsolutePath(relativeSourcePath);
+        
+        // Check if the source path exists before attempting to get attributes
+        if (!File.Exists(sourceAbsolutePath) && !Directory.Exists(sourceAbsolutePath))
+        {
+            throw new FileNotFoundException($"Source path not found: {sourceAbsolutePath}");
+        }
+
         var sourceAttributes = File.GetAttributes(sourceAbsolutePath);
         var isDirectory = sourceAttributes.HasFlag(FileAttributes.Directory);
 
@@ -420,9 +460,16 @@ public sealed class FileBrowserService
             throw new InvalidOperationException("Source and destination paths cannot be the same.");
         }
 
-        if (File.Exists(destinationAbsolutePath))
+        // Handle duplicate filenames by renaming
+        var counter = 1;
+        var extension = Path.GetExtension(sourceName);
+        var nameWithoutExt = Path.GetFileNameWithoutExtension(sourceName);
+
+        while (File.Exists(destinationAbsolutePath))
         {
-            throw new InvalidOperationException("File already exists at destination.");
+            var newName = $"{nameWithoutExt} ({counter}){extension}";
+            destinationAbsolutePath = Path.Combine(destinationDirectory, newName);
+            counter++;
         }
 
         File.Move(sourceAbsolutePath, destinationAbsolutePath);
@@ -441,9 +488,14 @@ public sealed class FileBrowserService
             throw new InvalidOperationException("Source and destination paths cannot be the same.");
         }
 
-        if (Directory.Exists(destinationAbsolutePath))
+        // Handle duplicate directory names by renaming
+        var counter = 1;
+
+        while (Directory.Exists(destinationAbsolutePath))
         {
-            throw new InvalidOperationException("Directory already exists at destination.");
+            var newName = $"{sourceName} ({counter})";
+            destinationAbsolutePath = Path.Combine(destinationDirectory, newName);
+            counter++;
         }
 
         Directory.Move(sourceAbsolutePath, destinationAbsolutePath);
