@@ -58,7 +58,7 @@ The application will start and display the URL (typically `https://localhost:714
 - **Copy** - Copy files and folders to any destination
 - **Move** - Move files and folders between directories
 - **Delete** - Delete files and folders (with recursive deletion for non-empty directories)
-- **Preview** - Preview files
+- **Preview** - Preview files (Currently supports text files and images)
 - **Deep Linking** - URLs reflect current directory and search state for shareable links
 - **File Statistics** - Display file count, folder count, and total size for current directory
 - **Path Validation** - Security measures prevent path traversal attacks
