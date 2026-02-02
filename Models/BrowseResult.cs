@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace TestProject.Models;
 
 public sealed record BrowseResult(

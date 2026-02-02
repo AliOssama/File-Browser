@@ -1,9 +1,9 @@
 // Preview and modal management
 
-import { dom, showStatus, setListingMessage } from './ui.js';
+import { dom, showStatus } from './ui.js';
 import { getFilePreview, deleteItem, moveItem, copyItem } from './api.js';
-import { CONFIG, IMAGE_MIME_TYPES, ERROR_MESSAGES } from './config.js';
-import { formatDate, formatBytes, getFileExtension, getFileName, truncateText, normalizeClientPath } from './formatting.js';
+import { ERROR_MESSAGES } from './config.js';
+import { getFileName } from './formatting.js';
 
 /**
  * Show the move modal for an item

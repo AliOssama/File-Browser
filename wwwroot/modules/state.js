@@ -20,11 +20,3 @@ export function setState(updates) {
 export function getState() {
     return { ...state };
 }
-
-export function resetPagination() {
-    setState({
-        currentPage: 0,
-        allEntries: [],
-        displayedEntries: []
-    });
-}

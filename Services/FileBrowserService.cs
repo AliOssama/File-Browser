@@ -1,15 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.StaticFiles;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
+using System.Data;
 using TestProject.Models;
-
 namespace TestProject.Services;
 
 public sealed class FileBrowserService
@@ -18,10 +11,11 @@ public sealed class FileBrowserService
     private readonly string _rootPathWithSeparator;
     private readonly ILogger<FileBrowserService> _logger;
     private readonly FileExtensionContentTypeProvider _contentTypeProvider = new();
-
-    public FileBrowserService(IOptions<FileBrowserOptions> options, ILogger<FileBrowserService> logger)
+    private readonly IMemoryCache _cache;
+    public FileBrowserService(IOptions<FileBrowserOptions> options, ILogger<FileBrowserService> logger, IMemoryCache cache) 
     {
         _logger = logger;
+        _cache = cache;
         var configuredRoot = options.Value.RootPath;
         if (string.IsNullOrWhiteSpace(configuredRoot))
         {
@@ -37,17 +31,25 @@ public sealed class FileBrowserService
 
     public BrowseResult Browse(string? relativePath)
     {
-        var targetDirectory = ResolveDirectoryPath(relativePath);
-        var entries = Directory.EnumerateFileSystemEntries(targetDirectory)
-            .Select(ToEntry)
-            .OrderByDescending(entry => entry.IsDirectory)
-            .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        var cacheKey = $"browse_{relativePath ?? "root"}";
+        var result = _cache.GetOrCreate(cacheKey, entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1);
+            
+            var targetDirectory = ResolveDirectoryPath(relativePath);
+            var entries = Directory.EnumerateFileSystemEntries(targetDirectory)
+                .Select(ToEntry)
+                .OrderByDescending(entry => entry.IsDirectory)
+                .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            
+            var (totalBytes, fileCount, directoryCount) = CalculateTotals(entries);
+            var normalizedPath = NormalizeRelativePath(Path.GetRelativePath(_rootPath, targetDirectory));
 
-        var (totalBytes, fileCount, directoryCount) = CalculateTotals(entries);
-        var normalizedPath = NormalizeRelativePath(Path.GetRelativePath(_rootPath, targetDirectory));
-
-        return new BrowseResult(normalizedPath, entries, totalBytes, fileCount, directoryCount);
+            return new BrowseResult(normalizedPath, entries, totalBytes, fileCount, directoryCount);
+        });
+        
+        return result ?? throw new InvalidOperationException("Failed to browse directory");
     }
 
     public Task<IReadOnlyList<FileSystemEntry>> SearchAsync(
@@ -60,7 +62,6 @@ public sealed class FileBrowserService
             return Task.FromResult(Array.Empty<FileSystemEntry>() as IReadOnlyList<FileSystemEntry>);
         }
 
-        // Return a properly async task
         return SearchAsyncInternal(relativePath, searchTerm, cancellationToken);
     }
 
@@ -76,7 +77,6 @@ public sealed class FileBrowserService
         // Yield to thread pool to avoid blocking
         await Task.Yield();
 
-        // Use async enumeration approach for large directory trees
         var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true };
         
         try
@@ -130,7 +130,8 @@ public sealed class FileBrowserService
         }
 
         await using var destinationStream = File.Create(destinationPath);
-        await file.CopyToAsync(destinationStream, cancellationToken);
+        await file.CopyToAsync(destinationStream, cancellationToken);       
+        _cache.Remove($"browse_{relativePath ?? "root"}");
     }
 
     public (FileStream Stream, string ContentType, string FileName) GetDownloadStream(string relativeFilePath)
@@ -171,21 +172,19 @@ public sealed class FileBrowserService
         var fileName = Path.GetFileName(absolutePath);
         var fileInfo = new FileInfo(absolutePath);
 
-        // Max preview size: 1 MB for text, 500 KB for images
-        const long maxTextSize = 1024 * 1024;
-        const long maxImageSize = 500 * 1024;
-
-        if (fileInfo.Length > maxTextSize)
-        {
-            return FilePreview.CreateError(fileName, "File too large for preview (max 1 MB)");
-        }
-
         var extension = Path.GetExtension(absolutePath).ToLowerInvariant();
         var isTextFile = IsTextFile(extension);
         var isImageFile = IsImageFile(extension);
 
         if (isTextFile)
         {
+            // Max preview size: 1 MB for text
+            const long maxTextSize = 1024 * 1024;
+            if (fileInfo.Length > maxTextSize)
+            {
+                return FilePreview.CreateError(fileName, "File too large for preview (max 1 MB)");
+            }
+
             try
             {
                 var content = File.ReadAllText(absolutePath);
@@ -204,6 +203,8 @@ public sealed class FileBrowserService
 
         if (isImageFile)
         {
+            // Max preview size: 500 KB for images
+            const long maxImageSize = 500 * 1024;
             if (fileInfo.Length > maxImageSize)
             {
                 return FilePreview.CreateError(fileName, "Image file too large for preview (max 500 KB)");
@@ -257,7 +258,7 @@ public sealed class FileBrowserService
         }
 
         var absolutePath = ResolveAbsolutePath(relativeItemPath);
-        
+
         // Check if the path exists before attempting to get attributes
         if (!File.Exists(absolutePath) && !Directory.Exists(absolutePath))
         {
@@ -288,6 +289,9 @@ public sealed class FileBrowserService
             File.Delete(absolutePath);
             _logger.LogInformation("Deleted file: {Path}", absolutePath);
         }
+        var parentPath = Path.GetDirectoryName(relativeItemPath);
+        var normalizedParent = string.IsNullOrEmpty(parentPath) ? "root" : NormalizeRelativePath(parentPath);
+        _cache.Remove($"browse_{normalizedParent}");
     }
 
     private static void DeleteDirectoryRecursive(string directoryPath)
@@ -335,7 +339,9 @@ public sealed class FileBrowserService
         else
         {
             CopyFile(sourceAbsolutePath, relativeDestinationPath);
-        }
+        } 
+        var normalizedDest = NormalizeRelativePath(relativeDestinationPath);
+        _cache.Remove($"browse_{(string.IsNullOrEmpty(normalizedDest) ? "root" : normalizedDest)}");
     }
 
     public void MovePath(string relativeSourcePath, string relativeDestinationPath)
@@ -369,6 +375,12 @@ public sealed class FileBrowserService
         {
             MoveFile(sourceAbsolutePath, relativeDestinationPath);
         }
+                
+        var sourceParent = Path.GetDirectoryName(relativeSourcePath);
+        var normalizedSource = string.IsNullOrEmpty(sourceParent) ? "root" : NormalizeRelativePath(sourceParent);
+        var normalizedDest = string.IsNullOrEmpty(relativeDestinationPath) ? "root" : NormalizeRelativePath(relativeDestinationPath);
+        _cache.Remove($"browse_{normalizedSource}");
+        _cache.Remove($"browse_{normalizedDest}");
     }
 
     private void CopyFile(string sourceAbsolutePath, string relativeDestinationPath)
@@ -453,7 +465,7 @@ public sealed class FileBrowserService
         var destinationDirectory = ResolveDirectoryPath(relativeDestinationPath);
         var destinationAbsolutePath = Path.Combine(destinationDirectory, sourceName);
         EnsureWithinRoot(destinationAbsolutePath);
-
+        
         if (string.Equals(sourceAbsolutePath, destinationAbsolutePath, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException("Source and destination paths cannot be the same.");
@@ -512,6 +524,7 @@ public sealed class FileBrowserService
         return absolutePath;
     }
 
+
     private string ResolveAbsolutePath(string? relativePath)
     {
         var sanitized = NormalizeRelativePath(relativePath);
@@ -537,7 +550,7 @@ public sealed class FileBrowserService
 
     private static string NormalizeRelativePath(string? relativePath)
     {
-        if (string.IsNullOrWhiteSpace(relativePath) || relativePath == ".")
+        if (string.IsNullOrWhiteSpace(relativePath) || relativePath == "." || relativePath == "..")
         {
             return string.Empty;
         }
@@ -554,16 +567,13 @@ public sealed class FileBrowserService
         var isDirectory = attributes.HasFlag(FileAttributes.Directory);
 
         var size = isDirectory ? 0 : new FileInfo(absolutePath).Length;
-        var lastModified = isDirectory
-            ? Directory.GetLastWriteTimeUtc(absolutePath)
-            : File.GetLastWriteTimeUtc(absolutePath);
 
         return new FileSystemEntry(
             Path.GetFileName(absolutePath),
             NormalizeRelativePath(Path.GetRelativePath(_rootPath, absolutePath)),
             isDirectory,
-            size,
-            lastModified);
+            size
+        );
     }
 
     private static (long totalBytes, int fileCount, int directoryCount) CalculateTotals(IEnumerable<FileSystemEntry> entries)

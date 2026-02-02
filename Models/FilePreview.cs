@@ -1,5 +1,3 @@
-using System;
-
 namespace TestProject.Models;
 
 public sealed record FilePreview(

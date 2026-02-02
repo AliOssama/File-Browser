@@ -1,7 +1,7 @@
 // Rendering module for file listings
 
 import { dom, setListingMessage, updateStats } from './ui.js';
-import { formatBytes, formatDate, normalizeClientPath, getFileName } from './formatting.js';
+import { formatBytes, formatDate, normalizeClientPath } from './formatting.js';
 import { showMoveModal, showCopyModal, confirmDeleteItem, showPreviewModal } from './modals.js';
 import { getDownloadUrl } from './api.js';
 

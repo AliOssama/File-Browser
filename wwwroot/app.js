@@ -1,12 +1,12 @@
 // Main application entry point
 
-import { state, setState, resetPagination } from './modules/state.js';
+import { state, setState } from './modules/state.js';
 import { dom, setListingMessage, updateStaticUi, toggleBrowserDialog, showStatus, clearFileInput, getSelectedFiles } from './modules/ui.js';
-import { browsePath, searchFiles, uploadFiles, getDownloadUrl } from './modules/api.js';
+import { browsePath, searchFiles, uploadFiles } from './modules/api.js';
 import { renderBrowseResults, renderSearchResults, renderEntries, applyNormalizedPath } from './modules/render.js';
 import { closeMoveModal, closeCopyModal, closePreviewModal } from './modules/modals.js';
-import { normalizeClientPath, getFileExtension, formatBytes } from './modules/formatting.js';
-import { CONFIG, ERROR_MESSAGES } from './modules/config.js';
+import { normalizeClientPath } from './modules/formatting.js';
+import { ERROR_MESSAGES } from './modules/config.js';
 
 // Initialize the application
 function init() {
@@ -113,7 +113,6 @@ async function loadData() {
     setState({ isLoading: true });
     setListingMessage('Loading...');
     updateStaticUi(state);
-    resetPagination();
 
     try {
         if (state.query) {
@@ -201,7 +200,6 @@ async function handleUpload() {
 function persistState() {
     updateUrlFromState();
     updateStaticUi(state);
-    resetPagination();
     void loadData();
 }
 

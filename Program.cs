@@ -1,12 +1,8 @@
-using Microsoft.AspNetCore.Antiforgery;
-using System.IO;
 using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using TestProject.Services;
-using TestProject.Models;
 using Microsoft.AspNetCore.Http.Features;
-
+using Microsoft.AspNetCore.Mvc;
+using TestProject.Models;
+using TestProject.Services;
 namespace TestProject {
     public class Program {
         public static void Main(string[] args) {
@@ -15,12 +11,12 @@ namespace TestProject {
             builder.Services.Configure<FileBrowserOptions>(builder.Configuration.GetSection("FileBrowser"));
             builder.Services.AddSingleton<FileBrowserService>();
             builder.Services.AddProblemDetails();
-            
-            // Configure form options
+            builder.Services.AddMemoryCache();
+
             builder.Services.Configure<FormOptions>(options =>
             {
-                options.ValueLengthLimit = int.MaxValue;
-                options.MultipartBodyLengthLimit = int.MaxValue;
+                options.ValueLengthLimit = 500 * 1024 * 1024; //500MB
+                options.MultipartBodyLengthLimit = 500 * 1024 * 1024; //500MB
             });
 
             var app = builder.Build();
@@ -69,7 +65,10 @@ namespace TestProject {
                 DefaultFileNames = { "index.html" }
             });
             app.UseStaticFiles();
-            
+
+            // Return 204 for favicon requests to avoid 404 in browser console
+            app.MapGet("/favicon.ico", () => Results.NoContent());
+
             app.MapGet("/api/files/browse", (string? path, FileBrowserService service) =>
             {
                 var result = service.Browse(path);
